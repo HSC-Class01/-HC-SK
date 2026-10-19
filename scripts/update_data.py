@@ -172,28 +172,29 @@ def main() -> None:
     filings = filing_index(corp_code, years)
     periods = {"annual": [], "half_year": [], "quarterly": []}
     errors = []
-    # Oldest first so average balance ratios can use the previous observed period balance.
+    # Process periods in fiscal order so average-balance ratios can use the adjacent balance sheet.
     requests_to_make = []
     for year in years:
-        for category, code in (("annual", "11011"), ("half_year", "11012"), ("quarterly", "11013"), ("quarterly", "11014")):
+        for category, code in (("quarterly", "11013"), ("half_year", "11012"), ("quarterly", "11014"), ("annual", "11011")):
             if (year, code) in filings:
                 requests_to_make.append((year, code, category, filings[(year, code)]))
-    prev_balance = {"assets": None, "equity": None}
+    balances = {}
     for year, code, category, filing in requests_to_make:
         try:
             rows = accounts(corp_code, year, code)
             if not rows:
                 continue
             label = {"11011": "연간", "11012": "반기", "11013": "1분기", "11014": "3분기"}[code]
+            prior_key = (year - 1, "11011") if code in ("11011", "11013") else (year, "11013" if code == "11012" else "11012")
+            prior = balances.get(prior_key, {})
             result = extract(rows, "Q1" if code == "11013" else ("Q3" if code == "11014" else label),
-                             prev_balance["assets"], prev_balance["equity"])
+                             prior.get("assets"), prior.get("equity"))
             result.update({"year": year, "period": label, "report_code": code,
                            "receipt_no": filing.get("rcept_no"), "receipt_date": filing.get("rcept_dt"),
                            "report_name": filing.get("report_nm"),
                            "dart_url": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={filing.get('rcept_no')}"})
             periods[category].append(result)
-            prev_balance["assets"] = result.get("total_assets") or prev_balance["assets"]
-            prev_balance["equity"] = result.get("total_equity") or prev_balance["equity"]
+            balances[(year, code)] = {"assets": result.get("total_assets"), "equity": result.get("total_equity")}
             time.sleep(0.15)
         except Exception as exc:
             errors.append({"year": year, "report_code": code, "error": str(exc)})

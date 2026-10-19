@@ -17,6 +17,8 @@ concurrency:
 jobs:
   update-data:
     runs-on: ubuntu-latest
+    env:
+      DART_API_KEY: ${{ secrets.DART_API_KEY }}
     steps:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
@@ -27,9 +29,11 @@ jobs:
       - name: 의존성 설치
         run: pip install -r requirements.txt
       - name: DART 공시 수집 및 재무비율 계산
-        env:
-          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        if: ${{ env.DART_API_KEY != '' }}
         run: python scripts/update_data.py
+      - name: 인증키 미설정 안내
+        if: ${{ env.DART_API_KEY == '' }}
+        run: echo "DART_API_KEY is not configured; deploying the dashboard with the data setup notice."
       - name: 변경 데이터 커밋
         run: |
           git config user.name "github-actions[bot]"
