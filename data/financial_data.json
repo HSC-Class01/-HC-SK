@@ -1,0 +1,8 @@
+{
+  "company": {"name": "SK", "corp_code": "", "stock_code": "034730"},
+  "updated_at": null,
+  "source": "OpenDART",
+  "periods": {"annual": [], "half_year": [], "quarterly": []},
+  "filings": [],
+  "note": "GitHub Actions에서 DART_API_KEY를 설정하고 workflow_dispatch를 실행하면 자동 수집됩니다."
+}
