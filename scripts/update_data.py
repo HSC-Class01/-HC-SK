@@ -88,7 +88,10 @@ def accounts(corp_code: str, year: int, report_code: str) -> list[dict]:
 
 def extract(rows: list[dict], kind: str, previous_assets: float | None, previous_equity: float | None) -> dict:
     # DART supplies quarter-only values separately when available. Balance sheet uses period-end values.
-    income_field = "thstrm_add_amount" if kind in ("Q1", "Q3") else "thstrm_amount"
+    # On Q3 filings thstrm_amount is the standalone three-month figure while
+    # thstrm_add_amount is the nine-month cumulative figure. Q1 has only the
+    # first quarter in either field; half-year and annual statements are cumulative periods.
+    income_field = "thstrm_amount" if kind == "Q3" else ("thstrm_add_amount" if kind == "Q1" else "thstrm_amount")
     sales = row_value(rows, ("ifrs-full_Revenue", "ifrs_Revenue"), ("매출액", "수익(매출액)", "영업수익"), income_field)
     operating = row_value(rows, ("ifrs-full_ProfitLossFromOperatingActivities",), ("영업이익", "영업손실"), income_field)
     net = row_value(rows, ("ifrs-full_ProfitLoss", "ifrs_ProfitLoss"), ("당기순이익", "분기순이익", "반기순이익"), income_field)
