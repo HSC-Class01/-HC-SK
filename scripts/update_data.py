@@ -125,17 +125,18 @@ def filing_index(corp_code: str, years: list[int]) -> dict[tuple[int, str], dict
                            pblntf_ty="A", page_count=100)
         for filing in payload.get("list", []):
             title = filing.get("report_nm", "")
+            period_match = re.search(r"(20\d{2})\s*[.년/-]\s*(\d{1,2})", title)
+            month = int(period_match.group(2)) if period_match else None
             code = None
             if "사업보고서" in title:
                 code = "11011"
             elif "반기보고서" in title:
                 code = "11012"
-            elif "분기보고서" in title and "3분기" in title:
+            elif "분기보고서" in title and (month == 9 or "3분기" in title):
                 code = "11014"
-            elif "분기보고서" in title and "1분기" in title:
+            elif "분기보고서" in title and (month == 3 or "1분기" in title):
                 code = "11013"
             if code:
-                period_match = re.search(r"(20\d{2})", title)
                 business_year = int(period_match.group(1)) if period_match else year
                 if not period_match and code == "11011":
                     business_year -= 1
@@ -208,7 +209,7 @@ def main() -> None:
             if prev:
                 for value_key, growth_key in (("revenue", "revenue_growth_pct"), ("operating_income", "operating_income_growth_pct")):
                     a, b = item.get(value_key), prev.get(value_key)
-                    item["ratios"][growth_key] = round((a - b) / abs(b) * 100, 2) if a is not None and b not in (None, 0) else None
+                    item["ratios"][growth_key] = round((a - b) / b * 100, 2) if a is not None and b is not None and b > 0 else None
         entries.sort(key=lambda x: (x["year"], x["period"]))
     annual_filings = [filing for (year, code), filing in filings.items() if code == "11011"]
     latest_annual = max(annual_filings, key=lambda x: x.get("rcept_dt", ""), default=None)
